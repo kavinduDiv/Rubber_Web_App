@@ -1,30 +1,21 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config({ path: '.env.local' });
+const mysql = require("mysql2/promise");
+require("dotenv").config({ path: ".env.local" });
 
 async function setup() {
-    try {
-        const connection = await mysql.createConnection({
-            host: process.env.MYSQL_HOST || '127.0.0.1',
-            user: process.env.MYSQL_USER || 'root',
-            password: process.env.MYSQL_PASSWORD || '',
-        });
+  try {
+    const connection = await mysql.createConnection({
+      host: process.env.MYSQL_HOST,
+      port: Number(process.env.MYSQL_PORT), 
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_DATABASE,
+      ssl: { rejectUnauthorized: false },
+      connectTimeout: 10000,
+    });
 
-        console.log('Connected to MySQL server.');
+    console.log("Connected to Railway MySQL");
 
-        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.MYSQL_DATABASE || 'rubber_db'}\``);
-        console.log(`Database '${process.env.MYSQL_DATABASE || 'rubber_db'}' created or exists.`);
-
-        await connection.end();
-
-        // Now create tables
-        const dbConnection = await mysql.createConnection({
-            host: process.env.MYSQL_HOST || '127.0.0.1',
-            user: process.env.MYSQL_USER || 'root',
-            password: process.env.MYSQL_PASSWORD || '',
-            database: process.env.MYSQL_DATABASE || 'rubber_db'
-        });
-
-        await dbConnection.query(`
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS trees (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tree_id VARCHAR(255) UNIQUE,
@@ -34,7 +25,7 @@ async function setup() {
       )
     `);
 
-        await dbConnection.query(`
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS collections (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tree_id VARCHAR(255),
@@ -45,13 +36,11 @@ async function setup() {
       )
     `);
 
-        console.log('Tables created successfully.');
-        await dbConnection.end();
-
-    } catch (error) {
-        console.error('Setup failed:', error);
-        process.exit(1);
-    }
+    console.log("Tables created successfully.");
+    await connection.end();
+  } catch (error) {
+    console.error("Setup failed:", error);
+  }
 }
 
 setup();
