@@ -85,7 +85,7 @@ export default function Home() {
                 onClick={() => setShowRegister(true)}
                 className="btn btn-primary flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-transform text-sm px-3 py-2"
               >
-                <FaPlus /> <span className="hidden sm:inline">New Tree 12</span>
+                <FaPlus /> <span className="hidden sm:inline">New Tree</span>
               </button>
             </div>
           </div>
