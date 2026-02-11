@@ -15,12 +15,6 @@ const pool = mysql.createPool({
 async function ensureTables() {
     const connection = await pool.getConnection();
     try {
-        // Modify tables to include new fields if they don't exist
-        // For simplicity in this script, we just CREATE IF NOT EXISTS.
-        // In a real migration, we'd alter.
-        // Let's try to run ALTER statements safely (ignore if exists) or just rely on CREATE for fresh setup.
-        // Given the prototype nature, I'll attempt to Create with new schema.
-
         await connection.query(`
       CREATE TABLE IF NOT EXISTS trees (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -44,7 +38,7 @@ async function ensureTables() {
       )
     `);
 
-        // Attempt to add columns if they are missing (simple migration)
+        // Attempt migration
         try { await connection.query("ALTER TABLE trees ADD COLUMN note TEXT"); } catch (e) { }
         try { await connection.query("ALTER TABLE collections ADD COLUMN note TEXT"); } catch (e) { }
 
@@ -67,11 +61,7 @@ export async function POST(req: Request) {
                     t.lat,
                     t.lng,
                     t.note || null
-                    // created_at is automatic in DB or we can pass it if we want to sync the client creation time
                 ]);
-
-                // We need to handle the params for the query dynamically or just standard bulk insert
-                // INSERT INTO trees (tree_id, lat, lng, note) VALUES ? ON DUPLICATE KEY UPDATE lat=VALUES(lat), lng=VALUES(lng), note=VALUES(note)
 
                 await connection.query(
                     'INSERT INTO trees (tree_id, lat, lng, note) VALUES ? ON DUPLICATE KEY UPDATE lat=VALUES(lat), lng=VALUES(lng), note=VALUES(note)',
@@ -80,7 +70,6 @@ export async function POST(req: Request) {
             }
 
             if (collections && collections.length > 0) {
-                // Insert collections
                 const collectionValues = collections.map((c: any) => [
                     c.tree_id,
                     c.cuts,
@@ -102,5 +91,27 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error('Sync error:', error);
         return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
+    }
+}
+
+export async function GET() {
+    try {
+        await ensureTables();
+        const connection = await pool.getConnection();
+
+        try {
+            const [trees] = await connection.query('SELECT * FROM trees');
+            const [collections] = await connection.query('SELECT * FROM collections');
+
+            return NextResponse.json({
+                trees,
+                collections
+            });
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+        return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }
